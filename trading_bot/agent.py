@@ -82,6 +82,9 @@ class Agent:
         """
         self.memory.append((state, action, reward, next_state, done))
 
+    def forget_all(self):
+        self.memory.clear()
+
     def act(self, state, is_eval=False):
         """Take action from given possible set of actions
         """
@@ -93,7 +96,7 @@ class Agent:
             self.first_iter = False
             return 1 # make a definite buy on the first iter
 
-        action_probs = self.model.predict(state)
+        action_probs = self.model.predict(state, verbose=0)
         return np.argmax(action_probs[0])
 
     def train_experience_replay(self, batch_size):
@@ -109,10 +112,10 @@ class Agent:
                     target = reward
                 else:
                     # approximate deep q-learning equation
-                    target = reward + self.gamma * np.amax(self.model.predict(next_state)[0])
+                    target = reward + self.gamma * np.amax(self.model.predict(next_state, verbose=0)[0])
 
                 # estimate q-values based on current state
-                q_values = self.model.predict(state)
+                q_values = self.model.predict(state, verbose=0)
                 # update the target for current action based on discounted reward
                 q_values[0][action] = target
 
@@ -130,10 +133,10 @@ class Agent:
                     target = reward
                 else:
                     # approximate deep q-learning equation with fixed targets
-                    target = reward + self.gamma * np.amax(self.target_model.predict(next_state)[0])
+                    target = reward + self.gamma * np.amax(self.target_model.predict(next_state, verbose=0)[0])
 
                 # estimate q-values based on current state
-                q_values = self.model.predict(state)
+                q_values = self.model.predict(state, verbose=0)
                 # update the target for current action based on discounted reward
                 q_values[0][action] = target
 
@@ -151,10 +154,10 @@ class Agent:
                     target = reward
                 else:
                     # approximate double deep q-learning equation
-                    target = reward + self.gamma * self.target_model.predict(next_state)[0][np.argmax(self.model.predict(next_state)[0])]
+                    target = reward + self.gamma * self.target_model.predict(next_state, verbose=0)[0][np.argmax(self.model.predict(next_state, verbose=0)[0])]
 
                 # estimate q-values based on current state
-                q_values = self.model.predict(state)
+                q_values = self.model.predict(state, verbose=0)
                 # update the target for current action based on discounted reward
                 q_values[0][action] = target
 

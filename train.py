@@ -37,7 +37,10 @@ from trading_bot.utils import (
     show_train_result,
     switch_k_backend_device
 )
+from trading_bot.callback import EvalCallback
 
+from os import path
+import time
 
 def main(train_stock, val_stock, window_size, batch_size, ep_count,
          strategy="t-dqn", model_name="model_debug", pretrained=False,
@@ -48,17 +51,46 @@ def main(train_stock, val_stock, window_size, batch_size, ep_count,
     Args: [python train.py --help]
     """
     agent = Agent(window_size, strategy=strategy, pretrained=pretrained, model_name=model_name)
+
+    # TODO: Find way to automatically track folders like sb3
+    stime = int(time.time())
+
+    config = {
+        "about": "testing wandb",
+        "dataset": "periodic",
+        "evaluation": "random",
+        "memory_replay": "continual"
+    }
+
+    log_path = "logs"
+    exp_name = "exp1"
+    callback = EvalCallback(
+        log_path,
+        exp_name,
+        config
+    )
     
     train_data = get_stock_data(train_stock)
     val_data = get_stock_data(val_stock)
 
+    # TEMP
+    # TODO: Make data offline as pandas or csv
+    import numpy as np
+    train_data = list(949.39368 * (np.sin(np.arange(1500)) * 2*np.pi/24 + 1))
+    val_data = list(949.39368 * (np.sin(np.arange(200)) * 2*np.pi/24 + 1))
+
     initial_offset = val_data[1] - val_data[0]
 
-    for episode in range(1, ep_count + 1):
-        train_result = train_model(agent, episode, train_data, ep_count=ep_count,
-                                   batch_size=batch_size, window_size=window_size)
-        val_result, _ = evaluate_model(agent, val_data, window_size, debug)
-        show_train_result(train_result, val_result, initial_offset)
+    try:
+        for episode in range(1, ep_count + 1):
+            train_result = train_model(agent, episode, train_data, ep_count=ep_count,
+                                       batch_size=batch_size, window_size=window_size, 
+                                       callback=callback)
+            val_result, _ = evaluate_model(agent, val_data, window_size, debug, callback)
+            show_train_result(train_result, val_result, initial_offset)
+    except KeyboardInterrupt:
+        print("Terminated early, saving to file...")
+        callback.finish()
 
 
 if __name__ == "__main__":

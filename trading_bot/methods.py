@@ -14,7 +14,7 @@ from .ops import (
 )
 
 
-def train_model(agent, episode, data, ep_count=100, batch_size=32, window_size=10):
+def train_model(agent, episode, data, ep_count=100, batch_size=32, window_size=10, callback=None):
     total_profit = 0
     data_length = len(data) - 1
 
@@ -22,8 +22,10 @@ def train_model(agent, episode, data, ep_count=100, batch_size=32, window_size=1
     avg_loss = []
 
     state = get_state(data, 0, window_size + 1)
+    no_more_memory_replay = False
 
-    for t in tqdm(range(data_length), total=data_length, leave=True, desc='Episode {}/{}'.format(episode, ep_count)):        
+    # for t in tqdm(range(data_length), total=data_length, leave=True, desc='Episode {}/{}'.format(episode, ep_count)):        
+    for t in range(data_length):
         reward = 0
         next_state = get_state(data, t + 1, window_size + 1)
 
@@ -47,20 +49,27 @@ def train_model(agent, episode, data, ep_count=100, batch_size=32, window_size=1
 
         done = (t == data_length - 1)
         agent.remember(state, action, reward, next_state, done)
+        if callback is not None:
+            callback.train_step(((state, action, reward, next_state, done)))
 
-        if len(agent.memory) > batch_size:
+        # if 1.1*batch_size >= len(agent.memory) > batch_size:
+        if len(agent.memory) > batch_size and not no_more_memory_replay: # TEMP
+            no_more_memory_replay = True
             loss = agent.train_experience_replay(batch_size)
             avg_loss.append(loss)
+            # forget after experience replay
+            agent.forget_all()
 
         state = next_state
 
-    if episode % 10 == 0:
-        agent.save(episode)
+    # if episode % 10 == 0:
+    # if episode % 2 == 0:
+    #     agent.save(episode)
 
     return (episode, ep_count, total_profit, np.mean(np.array(avg_loss)))
 
 
-def evaluate_model(agent, data, window_size, debug):
+def evaluate_model(agent, data, window_size, debug, callback=None):
     total_profit = 0
     data_length = len(data) - 1
 
@@ -82,7 +91,7 @@ def evaluate_model(agent, data, window_size, debug):
 
             history.append((data[t], "BUY"))
             if debug:
-                logging.debug("Buy at: {}".format(format_currency(data[t])))
+                logging.debug("Buy at: {} (btime = {})".format(format_currency(data[t]), t))
         
         # SELL
         elif action == 2 and len(agent.inventory) > 0:
@@ -93,15 +102,21 @@ def evaluate_model(agent, data, window_size, debug):
 
             history.append((data[t], "SELL"))
             if debug:
-                logging.debug("Sell at: {} | Position: {}".format(
-                    format_currency(data[t]), format_position(data[t] - bought_price)))
+                logging.debug("Sell at: {} | Position: {} (stime = {})".format(
+                    format_currency(data[t]), format_position(data[t] - bought_price), t))
         # HOLD
         else:
             history.append((data[t], "HOLD"))
 
         done = (t == data_length - 1)
         agent.memory.append((state, action, reward, next_state, done))
+        if callback is not None:
+            callback.eval_step((state, action, reward, next_state, done))
 
         state = next_state
         if done:
-            return total_profit, history
+            break
+
+    callback.eval_iter((total_profit))
+
+    return total_profit, history

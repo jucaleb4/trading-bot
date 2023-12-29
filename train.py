@@ -85,7 +85,7 @@ def main(batch_size,
     elif env_mode == BatteryMode.DELAY.value:
         mode_str = "delay"
 
-    env = gym.make("gym_examples/BatteryEnv-v0", nhistory=nhistory, data="default", mode=mode_str)
+    env = gym.make("gym_examples/BatteryEnv-v0", nhistory=nhistory, data="periodic", mode=mode_str)
 
     agent = Agent(env, batch_size=batch_size, strategy=strategy, 
                   pretrained=pretrained, model_name=model_name)
@@ -140,6 +140,7 @@ def main(batch_size,
 
             total_reward, _ = evaluate_model(agent, i, callback=eval_callback)
             ep_callback.log((i, elap_time, total_reward, total_steps))
+            ep_callback.save_and_clear_cache()
             if wandb_log is not None:
                 wandb_log.log({
                     "eval_iter": i, 

@@ -58,6 +58,7 @@ class BatteryMode(Enum): # borrowed from gym-examples
     FINE_CONTROL = 1
     LONG_CHARGE = 2
     PENALIZE = 3
+    DELAY = 4
 
 def main(batch_size, 
          ep_count,
@@ -73,14 +74,16 @@ def main(batch_size,
 
     Args: [python train.py --help]
     """
-    nhistory = 32
+    nhistory = 10
     mode_str = "default"
-    if env_mode == BatteryMode.FINE_CONTROL:
+    if env_mode == BatteryMode.FINE_CONTROL.value:
         mode_str = "fine_control"
-    elif env_mode == BatteryMode.LONG_CHARGE:
+    elif env_mode == BatteryMode.LONG_CHARGE.value:
         mode_str = "long_charge"
-    elif env_mode == BatteryMode.PENALIZE:
+    elif env_mode == BatteryMode.PENALIZE.value:
         mode_str = "penalize"
+    elif env_mode == BatteryMode.DELAY.value:
+        mode_str = "delay"
 
     env = gym.make("gym_examples/BatteryEnv-v0", nhistory=nhistory, data="default", mode=mode_str)
 
@@ -119,12 +122,14 @@ def main(batch_size,
         json.dump(config, fp, ensure_ascii=False, indent=4)
 
     wandb_log = None
+    """
     wandb_log = wandb.init(
         project="trading-bot",
         name=save_path.replace("/", "-"),
         config=config,
         entity="jucaleb4",
     )
+    """
 
     total_steps = 0
     
@@ -156,7 +161,7 @@ if __name__ == "__main__":
     args = docopt(__doc__)
 
     on_policy = args["--on-policy"]
-    env_mode = args["--env-mode"]
+    env_mode = int(args["--env-mode"])
     strategy = args["--strategy"]
     id = int(args["--id"])
     window_size = int(args["--window-size"])

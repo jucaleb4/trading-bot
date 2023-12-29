@@ -107,7 +107,8 @@ class Agent:
         """
         # take random action in order to diversify experience at the beginning
         if not on_policy and random.random() <= self.epsilon:
-            return random.randrange(self.action_size)
+            a = random.randrange(self.action_size)
+            return a
 
         if self.first_iter:
             self.first_iter = False

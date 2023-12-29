@@ -16,14 +16,21 @@ def get_latest_run_id(log_path: str, exp_name) -> int:
             max_run_id = int(run_id)
     return max_run_id
 
-def create_exp_folder(log_path: str, exp_name: str):
-    """ Creates new experimental folder. Returns folder name which can be appended:
+def create_exp_folder(log_path: str, exp_name: str, id: int=-1):
+    """ If not existant, creates new experimental folder. Returns folder name
+    which can be appended:
     
         fname_eval = os.path.join(save_path, "qlearn_eval.csv")
     """
-    exp_name_with_ver = f"{exp_name}_{get_latest_run_id(log_path, exp_name)+1}"
+    if id < 0:
+        exp_name_with_ver = f"{exp_name}_{get_latest_run_id(log_path, exp_name)+1}"
+    else:
+        exp_name_with_ver = f"{exp_name}_{id}"
+
     save_path = os.path.join(log_path, exp_name_with_ver)
-    os.makedirs(save_path)
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+
     return save_path
 
 class EvalCallback():

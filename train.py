@@ -2,7 +2,7 @@
 Script for training Stock Trading Bot.
 
 Usage:
-  train.py [--on-policy] [--env-mode=<env-mode>] [--strategy=<strategy>]
+  train.py [--on-policy] [--env-mode=<env-mode>] [--strategy=<strategy>] [--id=<id>]
     [--window-size=<window-size>] [--batch-size=<batch-size>]
     [--episode-count=<episode-count>] [--model-name=<model-name>]
     [--pretrained] [--debug]
@@ -14,6 +14,7 @@ Options:
                                       `dqn` i.e. Vanilla DQN,
                                       `t-dqn` i.e. DQN with fixed target distribution,
                                       `double-dqn` i.e. DQN with separate network for value estimation. [default: t-dqn]
+  --id=<id>                         Experiment id [default: -1]
   --window-size=<window-size>       Size of the n-day window stock data representation
                                     used as the feature vector. [default: 10]
   --batch-size=<batch-size>         Number of samples to train on in one mini-batch
@@ -62,6 +63,7 @@ def main(batch_size,
          ep_count,
          env_mode:BatteryMode=0,
          on_policy=True,
+         id=id,
          strategy="t-dqn", 
          model_name="model_debug", 
          pretrained=False,
@@ -96,7 +98,7 @@ def main(batch_size,
     # setup local logging
     log_path = "logs"
     exp_name = "periodic_qlearn"
-    save_path = create_exp_folder(log_path, exp_name)
+    save_path = create_exp_folder(log_path, exp_name, id)
 
     # for logging each step of evaluation
     fname_eval = os.path.join(save_path, "eval.csv")
@@ -106,8 +108,8 @@ def main(batch_size,
 
     # for logging overall results from epoch
     fname_ep = os.path.join(save_path, "episode_result.csv")
-    ep_header = ["iter", "tot_ep_rwd", "cum_steps"]
-    ep_fmt = "%i,%1.4e,%i"
+    ep_header = ["iter", "time (sec)", "tot_ep_rwd", "cum_steps"]
+    ep_fmt = "%i,%1.4e,%1.4e,%i"
     ep_callback = EvalCallback(fname_ep, ep_header, ep_fmt)
 
     # for saving config
@@ -127,14 +129,21 @@ def main(batch_size,
     total_steps = 0
     
     try:
+        stime = time.time()
         for i in range(ep_count):
             _, steps = train_model(agent, on_policy=on_policy)
+            elap_time = time.time() - stime
             total_steps += steps
 
             total_reward, _ = evaluate_model(agent, i, callback=eval_callback)
-            ep_callback.log((i, total_reward, total_steps))
+            ep_callback.log((i, elap_time, total_reward, total_steps))
             if wandb_log is not None:
-                wandb_log.log({"eval_iter": iter, "tot_ep_rwd": total_reward, "cum_steps": total_steps})
+                wandb_log.log({
+                    "eval_iter": i, 
+                    "elap_time": elap_time, 
+                    "tot_ep_rwd": total_reward, 
+                    "cum_steps": total_steps
+                })
 
             # show_train_result(train_result, val_result)
     except KeyboardInterrupt:
@@ -149,6 +158,7 @@ if __name__ == "__main__":
     on_policy = args["--on-policy"]
     env_mode = args["--env-mode"]
     strategy = args["--strategy"]
+    id = int(args["--id"])
     window_size = int(args["--window-size"])
     batch_size = int(args["--batch-size"])
     ep_count = int(args["--episode-count"])
@@ -164,6 +174,7 @@ if __name__ == "__main__":
              ep_count=ep_count, 
              env_mode=env_mode,
              on_policy=on_policy,
+             id=id,
              strategy=strategy, 
              model_name=model_name, 
              pretrained=pretrained)

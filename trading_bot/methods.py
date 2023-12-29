@@ -24,7 +24,7 @@ def run_model(agent, iter, train_model:bool=False, on_policy: bool=False, callba
     total_reward = 0
     num_steps = 0
 
-    data_length = 1024 # TODO: Magic num
+    data_length = 128 # TODO: Magic num
     env = agent.env
     batch_size = agent.batch_size
 

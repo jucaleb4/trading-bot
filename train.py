@@ -54,7 +54,7 @@ import wandb
 from enum import Enum
 
 class BatteryMode(Enum): # borrowed from gym-examples
-    DEFAULT: 0
+    DEFAULT = 0
     FINE_CONTROL = 1
     LONG_CHARGE = 2
     PENALIZE = 3

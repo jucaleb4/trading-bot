@@ -46,7 +46,7 @@ def run_model(agent, iter, train_model:bool=False, on_policy: bool=False, callba
         transform_next_state = np.copy(next_state)
         transform_next_state[0] = transform_next_state[0]/400
         transform_next_state[1:11] = (transform_next_state[1:11]+225)/950
-        reward = (reward+225)/300
+        transform_reward = (reward+225)/300
         done = term or trunc
 
         total_reward += reward
@@ -56,7 +56,7 @@ def run_model(agent, iter, train_model:bool=False, on_policy: bool=False, callba
             callback.log((iter, num_steps, state[0], state[1], action, reward))
 
         if train_model:
-            agent.remember(transform_state, action, reward, next_state, done)
+            agent.remember(transform_state, action, transform_reward, transform_next_state, done)
 
             # TODO: More principled way to do this?
             # if len(agent.memory) % batch_size == 0 and len(agent.memory) > batch_size:

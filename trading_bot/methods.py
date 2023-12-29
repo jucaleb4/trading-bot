@@ -24,8 +24,7 @@ def run_model(agent, iter, train_model:bool=False, on_policy: bool=False, callba
     total_reward = 0
     num_steps = 0
 
-    # TODO: More elegant way to do this
-    data_length = 128 # TODO: Magic num
+    data_length = 1024 # TODO: Magic num
     env = agent.env
     batch_size = agent.batch_size
 
@@ -50,6 +49,7 @@ def run_model(agent, iter, train_model:bool=False, on_policy: bool=False, callba
         if train_model:
             agent.remember(state, action, reward, next_state, done)
 
+            # TODO: More principled way to do this?
             if len(agent.memory) % batch_size == 0 and len(agent.memory) > batch_size:
                 logging.debug(f"Train iter {num_steps}")
                 loss = agent.train_experience_replay(batch_size)

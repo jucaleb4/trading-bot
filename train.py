@@ -19,7 +19,7 @@ Options:
                                     used as the feature vector. [default: 10]
   --batch-size=<batch-size>         Number of samples to train on in one mini-batch
                                     during training. [default: 32]
-  --episode-count=<episode-count>   Number of trading episodes to use for training. [default: 50]
+  --episode-count=<episode-count>   Number of trading episodes to use for training. [default: 12]
   --model-name=<model-name>         Name of the pretrained model to use. [default: model_debug]
   --pretrained                      Specifies whether to continue training a previously
                                     trained model (reads `model-name`).

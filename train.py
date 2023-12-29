@@ -122,14 +122,12 @@ def main(batch_size,
         json.dump(config, fp, ensure_ascii=False, indent=4)
 
     wandb_log = None
-    """
     wandb_log = wandb.init(
         project="trading-bot",
         name=save_path.replace("/", "-"),
         config=config,
         entity="jucaleb4",
     )
-    """
 
     total_steps = 0
     

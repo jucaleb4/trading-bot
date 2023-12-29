@@ -53,7 +53,7 @@ def run_model(agent, iter, train_model:bool=False, on_policy: bool=False, callba
         num_steps += 1
 
         if callback is not None:
-            callback.log((iter, num_steps, state[0], state[1], action, reward))
+            callback.log((iter, num_steps, state[0], state[1], action, total_reward))
 
         if train_model:
             agent.remember(transform_state, action, transform_reward, transform_next_state, done)

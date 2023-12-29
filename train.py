@@ -85,6 +85,14 @@ def main(batch_size,
     agent = Agent(env, batch_size=batch_size, strategy=strategy, 
                   pretrained=pretrained, model_name=model_name)
 
+    # setup wandb
+    config = {
+        "data": "periodic",
+        "alg": "t-dqn",
+        "on_policy": bool(on_policy),
+        "battery_env_mode": env_mode,
+    }
+
     # setup local logging
     log_path = "logs"
     exp_name = "periodic_qlearn"
@@ -102,13 +110,12 @@ def main(batch_size,
     ep_fmt = "%i,%1.4e,%i"
     ep_callback = EvalCallback(fname_ep, ep_header, ep_fmt)
 
-    # setup wandb
-    config = {
-        "data": "periodic",
-        "alg": "t-dqn",
-        "on_policy": on_policy,
-        "battery_env_mode": env_mode,
-    }
+    # for saving config
+    fname_metadata = os.path.join(save_path, "metadata.json")
+    import json
+    with open(fname_metadata, "w", encoding="utf-8") as fp:
+        json.dump(config, fp, ensure_ascii=False, indent=4)
+
     wandb_log = None
     wandb_log = wandb.init(
         project="trading-bot",
@@ -153,10 +160,10 @@ if __name__ == "__main__":
     switch_k_backend_device()
 
     try:
-        main(batch_size,
-             ep_count, 
-             on_policy,
-             env_mode,
+        main(batch_size=batch_size,
+             ep_count=ep_count, 
+             env_mode=env_mode,
+             on_policy=on_policy,
              strategy=strategy, 
              model_name=model_name, 
              pretrained=pretrained)

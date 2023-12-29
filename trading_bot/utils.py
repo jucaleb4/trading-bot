@@ -7,10 +7,28 @@ import numpy as np
 
 import keras.backend as K
 
+from enum import Enum
+
+class Modes(Enum):
+    """ Different modes """
+    DEFAULT = 0
+    LONGER = 1
+    PENALIZE = 2
+    WARMUP = 3
+
+class Actions(Enum):
+    """ Different actions """
+    NOTHING = 0
+    BUY = 1
+    SELL = 2
+    BUY_TWO = 3
+    BUY_THREE = 4
+
+def is_buy_action(a: Actions):
+    return (a == Actions.BUY or a == Actions.BUY_TWO or a == Actions.BUY_THREE)
 
 # Formats Position
 format_position = lambda price: ('-$' if price < 0 else '+$') + '{0:.2f}'.format(abs(price))
-
 
 # Formats Currency
 format_currency = lambda price: '${0:.2f}'.format(abs(price))

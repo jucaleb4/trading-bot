@@ -22,6 +22,7 @@ Options:
                                     trained model (reads `model-name`).
   --debug                           Specifies whether to use verbose logs during eval operation.
 """
+import numpy as np
 
 import logging
 import coloredlogs
@@ -42,18 +43,25 @@ from trading_bot.callback import EvalCallback
 from os import path
 import time
 
-def main(train_stock, val_stock, window_size, batch_size, ep_count,
-         strategy="t-dqn", model_name="model_debug", pretrained=False,
-         debug=False):
+import gymnasium as gym
+import gym_examples
+
+def main(batch_size, 
+         ep_count,
+         strategy="t-dqn", 
+         model_name="model_debug", 
+         pretrained=False,
+):
     """ Trains the stock trading bot using Deep Q-Learning.
     Please see https://arxiv.org/abs/1312.5602 for more details.
 
     Args: [python train.py --help]
     """
-    agent = Agent(window_size, strategy=strategy, pretrained=pretrained, model_name=model_name)
+    nhistory = 32
+    env = gym.make("gym_examples/BatteryEnv-v0", nhistory=nhistory, data="default")
 
-    # TODO: Find way to automatically track folders like sb3
-    stime = int(time.time())
+    agent = Agent(env, batch_size=batch_size, strategy=strategy, 
+                  pretrained=pretrained, model_name=model_name)
 
     config = {
         "about": "testing wandb",
@@ -64,34 +72,17 @@ def main(train_stock, val_stock, window_size, batch_size, ep_count,
 
     log_path = "logs"
     exp_name = "exp1"
-    callback = EvalCallback(
-        log_path,
-        exp_name,
-        config
-    )
+    callback = None
+    # callback = EvalCallback(log_path, exp_name, config)
     
-    train_data = get_stock_data(train_stock)
-    val_data = get_stock_data(val_stock)
-
-    # TEMP
-    # TODO: Make data offline as pandas or csv
-    import numpy as np
-    train_data = list(949.39368 * (np.sin(np.arange(1500)) * 2*np.pi/24 + 1))
-    val_data = list(949.39368 * (np.sin(np.arange(200)) * 2*np.pi/24 + 1))
-
-    initial_offset = val_data[1] - val_data[0]
-
     try:
-        for episode in range(1, ep_count + 1):
-            train_result = train_model(agent, episode, train_data, ep_count=ep_count,
-                                       batch_size=batch_size, window_size=window_size, 
-                                       callback=callback)
-            val_result, _ = evaluate_model(agent, val_data, window_size, debug, callback)
-            show_train_result(train_result, val_result, initial_offset)
+        for _ in range(ep_count):
+            train_model(agent, callback=callback)
+            evaluate_model(agent, callback=callback)
+            # show_train_result(train_result, val_result)
     except KeyboardInterrupt:
         print("Terminated early, saving to file...")
         callback.finish()
-
 
 if __name__ == "__main__":
     args = docopt(__doc__)
@@ -110,8 +101,10 @@ if __name__ == "__main__":
     switch_k_backend_device()
 
     try:
-        main(train_stock, val_stock, window_size, batch_size,
-             ep_count, strategy=strategy, model_name=model_name, 
-             pretrained=pretrained, debug=debug)
+        main(batch_size,
+             ep_count, 
+             strategy=strategy, 
+             model_name=model_name, 
+             pretrained=pretrained)
     except KeyboardInterrupt:
         print("Aborted!")

@@ -28,12 +28,29 @@ def huber_loss(y_true, y_pred, clip_delta=1.0):
 class Agent:
     """ Stock Trading Bot """
 
-    def __init__(self, state_size, strategy="t-dqn", reset_every=1000, pretrained=False, model_name=None):
+    def __init__(
+            self, 
+            env, 
+            batch_size=32,
+            strategy="t-dqn", 
+            reset_every=1000, 
+            pretrained=False, 
+            model_name=None
+        ):
+
         self.strategy = strategy
+        self.env = env
+        self.batch_size = batch_size
 
         # agent config
-        self.state_size = state_size    	# normalized previous days
-        self.action_size = 3           		# [sit, buy, sell]
+        try:
+            self.state_size = env.observation_space.shape[0]
+        except:
+            self.state_size = env.observation_space.n  
+        try:
+            self.action_size = env.action_space.shape[0]
+        except:
+            self.action_size = env.action_space.n      
         self.model_name = model_name
         self.inventory = []
         self.memory = deque(maxlen=10000)
@@ -85,11 +102,11 @@ class Agent:
     def forget_all(self):
         self.memory.clear()
 
-    def act(self, state, is_eval=False):
+    def act(self, state, on_policy=False):
         """Take action from given possible set of actions
         """
         # take random action in order to diversify experience at the beginning
-        if not is_eval and random.random() <= self.epsilon:
+        if not on_policy and random.random() <= self.epsilon:
             return random.randrange(self.action_size)
 
         if self.first_iter:
@@ -133,14 +150,18 @@ class Agent:
                     target = reward
                 else:
                     # approximate deep q-learning equation with fixed targets
-                    target = reward + self.gamma * np.amax(self.target_model.predict(next_state, verbose=0)[0])
+                    # related issue: https://stackoverflow.com/questions/69933345/expected-min-ndim-2-found-ndim-1-full-shape-received-none
+                    next_state_tensor = np.array([next_state])
+                    target = reward + self.gamma * np.amax(self.target_model.predict(next_state_tensor, verbose=0)[0])
 
                 # estimate q-values based on current state
-                q_values = self.model.predict(state, verbose=0)
+                # related issue: https://stackoverflow.com/questions/69933345/expected-min-ndim-2-found-ndim-1-full-shape-received-none
+                state_tensor = np.array([state])
+                q_values = self.model.predict(state_tensor, verbose=0)
                 # update the target for current action based on discounted reward
                 q_values[0][action] = target
 
-                X_train.append(state[0])
+                X_train.append(state)
                 y_train.append(q_values[0])
 
         # Double DQN

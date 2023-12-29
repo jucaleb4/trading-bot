@@ -24,4 +24,5 @@ def get_state(data, t, n_days):
     res = []
     for i in range(n_days - 1):
         res.append(sigmoid(block[i + 1] - block[i]))
+        # res.append(block[i + 1] - block[i])
     return np.array([res])

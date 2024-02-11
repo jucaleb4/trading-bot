@@ -23,6 +23,8 @@ Options:
   --debug                           Specifies whether to use verbose logs during eval operation.
 """
 
+import numpy as np
+
 import logging
 import coloredlogs
 
@@ -49,8 +51,15 @@ def main(train_stock, val_stock, window_size, batch_size, ep_count,
     """
     agent = Agent(window_size, strategy=strategy, pretrained=pretrained, model_name=model_name)
     
+
+    [lo, hi] = [-225, 725]
+    ndata = 1024 # 90 * 4 * 24
+    _data = (hi-lo)/2 * (np.sin(np.arange(ndata) * 2 * np.pi/(4*24)) + 1) + (hi+lo)/2
+
     train_data = get_stock_data(train_stock)
     val_data = get_stock_data(val_stock)
+    train_data = _data.tolist() # get_stock_data(train_stock)
+    val_data = _data.tolist() # get_stock_data(val_stock)
 
     initial_offset = val_data[1] - val_data[0]
 

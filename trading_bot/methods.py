@@ -23,7 +23,8 @@ def train_model(agent, episode, data, ep_count=100, batch_size=32, window_size=1
 
     state = get_state(data, 0, window_size + 1)
 
-    for t in tqdm(range(data_length), total=data_length, leave=True, desc='Episode {}/{}'.format(episode, ep_count)):        
+    # for t in tqdm(range(data_length), total=data_length, leave=True, desc='Episode {}/{}'.format(episode, ep_count)):        
+    for t in range(data_length):
         reward = 0
         next_state = get_state(data, t + 1, window_size + 1)
 
@@ -48,7 +49,7 @@ def train_model(agent, episode, data, ep_count=100, batch_size=32, window_size=1
         done = (t == data_length - 1)
         agent.remember(state, action, reward, next_state, done)
 
-        if len(agent.memory) > batch_size:
+        if len(agent.memory) > batch_size and len(agent.memory) % batch_size == 0:
             loss = agent.train_experience_replay(batch_size)
             avg_loss.append(loss)
 
@@ -69,6 +70,8 @@ def evaluate_model(agent, data, window_size, debug):
     
     state = get_state(data, 0, window_size + 1)
 
+    soc = np.zeros(data_length+1)
+
     for t in range(data_length):        
         reward = 0
         next_state = get_state(data, t + 1, window_size + 1)
@@ -79,6 +82,7 @@ def evaluate_model(agent, data, window_size, debug):
         # BUY
         if action == 1:
             agent.inventory.append(data[t])
+            soc[t+1] = min(400, soc[t] + 50)
 
             history.append((data[t], "BUY"))
             if debug:
@@ -90,6 +94,7 @@ def evaluate_model(agent, data, window_size, debug):
             delta = data[t] - bought_price
             reward = delta #max(delta, 0)
             total_profit += delta
+            soc[t+1] = max(0, soc[t] + 50)
 
             history.append((data[t], "SELL"))
             if debug:
@@ -98,10 +103,16 @@ def evaluate_model(agent, data, window_size, debug):
         # HOLD
         else:
             history.append((data[t], "HOLD"))
+            soc[t+1] = soc[t]
 
         done = (t == data_length - 1)
         agent.memory.append((state, action, reward, next_state, done))
 
         state = next_state
         if done:
+            with open("ql_og.csv", "ab") as fp:
+                np.savetxt(fp, soc, delimiter=",")
             return total_profit, history
+
+    with open("ql_og.csv", "ab") as fp:
+        np.savetxt(fp, soc, delimiter=",")

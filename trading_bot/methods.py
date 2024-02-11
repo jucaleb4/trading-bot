@@ -1,74 +1,74 @@
-import os
 import logging
-
 import numpy as np
 
-from tqdm import tqdm
+from trading_bot.callback import EvalCallback
 
-from .utils import (
-    format_currency,
-    format_position
-)
-from .ops import (
-    get_state
-)
+def train_model(agent, on_policy: bool=True):
+    return run_model(agent, 0, train_model=True, on_policy=on_policy, callback=None)
 
+def evaluate_model(agent, iter, callback: EvalCallback=None):
+    return run_model(agent, iter, train_model=False, on_policy=True, callback=callback)
 
-def train_model(agent, episode, data, ep_count=100, batch_size=32, window_size=10):
-    total_profit = 0
-    data_length = len(data) - 1
+def run_model(agent, iter, train_model:bool=False, on_policy: bool=False, callback=None):
+    """ Runs the model
+
+    # TODO: How to choose number of steps (hard coded at 1024)
+
+    :params agent: agent with policy and hyperparameters
+    :params iter: current ieration of running a model
+    :params train_model: whether we want to update parameters (train) or freeze (eval)
+    :params on_policy: whether selecting action should be on policy or off policy (randomized)
+    :params callback: callback with logging capabilities
+    :returns total_reward: total accumulated rewards (undiscounted)
+    :returns num_steps: total number of steps taken in the environment
+    """
+    total_reward = 0
+    num_steps = 0
+
+    data_length = 128 # TODO: Magic num
+    env = agent.env
+    batch_size = agent.batch_size
 
     agent.inventory = []
     avg_loss = []
 
-    state = get_state(data, 0, window_size + 1)
+    state, _ = env.reset()
+    # TODO: Make this better:- normalize
+    transform_state = np.copy(state)
+    transform_state[0] = transform_state[0]/400
+    transform_state[1:11] = (transform_state[1:11]+225)/950
 
-    # for t in tqdm(range(data_length), total=data_length, leave=True, desc='Episode {}/{}'.format(episode, ep_count)):        
-    for t in range(data_length):
-        reward = 0
-        next_state = get_state(data, t + 1, window_size + 1)
-
+    for _ in range(data_length):
         # select an action
-        action = agent.act(state)
+        action = agent.act(transform_state, on_policy=on_policy)
 
-        # BUY
-        if action == 1:
-            agent.inventory.append(data[t])
+        next_state, reward, term, trunc, _ = env.step(action)
+        transform_next_state = np.copy(next_state)
+        transform_next_state[0] = transform_next_state[0]/400
+        transform_next_state[1:11] = (transform_next_state[1:11]+225)/950
+        transform_reward = (reward+225)/300
+        done = term or trunc
 
-        # SELL
-        elif action == 2 and len(agent.inventory) > 0:
-            bought_price = agent.inventory.pop(0)
-            delta = data[t] - bought_price
-            reward = delta #max(delta, 0)
-            total_profit += delta
+        total_reward += reward
+        num_steps += 1
 
-        # HOLD
-        else:
-            pass
+        if callback is not None:
+            callback.log((iter, num_steps, state[0], state[1], action, total_reward))
 
-        done = (t == data_length - 1)
-        agent.remember(state, action, reward, next_state, done)
+        if train_model:
+            agent.remember(transform_state, action, transform_reward, transform_next_state, done)
 
         if len(agent.memory) > batch_size and len(agent.memory) % batch_size == 0:
             loss = agent.train_experience_replay(batch_size)
             avg_loss.append(loss)
 
         state = next_state
+        transform_state = transform_next_state
+        if done:
+            break
 
-    if episode % 10 == 0:
-        agent.save(episode)
-
-    return (episode, ep_count, total_profit, np.mean(np.array(avg_loss)))
-
-
-def evaluate_model(agent, data, window_size, debug):
-    total_profit = 0
-    data_length = len(data) - 1
-
-    history = []
-    agent.inventory = []
-    
-    state = get_state(data, 0, window_size + 1)
+    if callback is not None:
+        callback.save_and_clear_cache()
 
     soc = np.zeros(data_length+1)
 
@@ -116,3 +116,4 @@ def evaluate_model(agent, data, window_size, debug):
 
     with open("ql_og.csv", "ab") as fp:
         np.savetxt(fp, soc, delimiter=",")
+    return total_profit, history

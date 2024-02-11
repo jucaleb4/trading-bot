@@ -28,12 +28,29 @@ def huber_loss(y_true, y_pred, clip_delta=1.0):
 class Agent:
     """ Stock Trading Bot """
 
-    def __init__(self, state_size, strategy="t-dqn", reset_every=1000, pretrained=False, model_name=None):
+    def __init__(
+            self, 
+            env, 
+            batch_size=32,
+            strategy="t-dqn", 
+            reset_every=1000, 
+            pretrained=False, 
+            model_name=None
+        ):
+
         self.strategy = strategy
+        self.env = env
+        self.batch_size = batch_size
 
         # agent config
-        self.state_size = state_size    	# normalized previous days
-        self.action_size = 3           		# [sit, buy, sell]
+        try:
+            self.state_size = env.observation_space.shape[0]
+        except:
+            self.state_size = env.observation_space.n  
+        try:
+            self.action_size = env.action_space.shape[0]
+        except:
+            self.action_size = env.action_space.n      
         self.model_name = model_name
         self.inventory = []
         self.memory = deque(maxlen=10000)
@@ -83,7 +100,10 @@ class Agent:
         """
         self.memory.append((state, action, reward, next_state, done))
 
-    def act(self, state, is_eval=False):
+    def forget_all(self):
+        self.memory.clear()
+
+    def act(self, state, on_policy=False):
         """Take action from given possible set of actions
         """
         # take random action in order to diversify experience at the beginning
@@ -92,9 +112,12 @@ class Agent:
 
         if self.first_iter:
             self.first_iter = False
-            return 1 # make a definite buy on the first iter
+            return 2 # make a definite buy on the first iter
 
         action_probs = self.model.predict(state, verbose=0)
+        # from old branch vvvvv
+        # state_tensor = np.array([state])
+        # action_probs = self.model.predict(state_tensor, verbose=0)
         return np.argmax(action_probs[0])
 
     def train_experience_replay(self, batch_size):
@@ -111,9 +134,17 @@ class Agent:
                 else:
                     # approximate deep q-learning equation
                     target = reward + self.gamma * np.amax(self.model.predict(next_state, verbose=0)[0])
+                    # old branch vvvvvv
+                    # next_state_tensor = np.array([next_state])
+                    # target = reward + self.gamma * np.amax(self.model.predict(next_state_tensor, verbose=0)[0])
 
                 # estimate q-values based on current state
                 q_values = self.model.predict(state, verbose=0)
+                # estimate q-values based on current state
+                # old branch vvvvv
+                # state_tensor = np.array([state])
+                # q_values = self.model.predict(state_tensor, verbose=0)
+
                 # update the target for current action based on discounted reward
                 q_values[0][action] = target
 
@@ -131,14 +162,26 @@ class Agent:
                     target = reward
                 else:
                     # approximate deep q-learning equation with fixed targets
+
                     target = reward + self.gamma * np.amax(self.target_model.predict(next_state, verbose=0)[0])
+                    # old branch vvvvvv
+                    # related issue: https://stackoverflow.com/questions/69933345/expected-min-ndim-2-found-ndim-1-full-shape-received-none
+                    # next_state_tensor = np.array([next_state])
+                    # target = reward + self.gamma * np.amax(self.target_model.predict(next_state_tensor, verbose=0)[0])
 
                 # estimate q-values based on current state
                 q_values = self.model.predict(state, verbose=0)
+
+                # estimate q-values based on current state
+                # old branch vvvvv
+                # related issue: https://stackoverflow.com/questions/69933345/expected-min-ndim-2-found-ndim-1-full-shape-received-none
+                # state_tensor = np.array([state])
+                # q_values = self.model.predict(state_tensor, verbose=0)
+
                 # update the target for current action based on discounted reward
                 q_values[0][action] = target
 
-                X_train.append(state[0])
+                X_train.append(state)
                 y_train.append(q_values[0])
 
         # Double DQN

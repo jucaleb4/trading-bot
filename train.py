@@ -91,18 +91,18 @@ def main(batch_size,
     agent = Agent(env, batch_size=batch_size, strategy=strategy, 
                   pretrained=pretrained, model_name=model_name)
 
-    # # setup wandb
-    # config = {
-    #     "data": "periodic",
-    #     "alg": "t-dqn",
-    #     "on_policy": bool(on_policy),
-    #     "battery_env_mode": env_mode,
-    # }
+    # setup wandb
+    config = {
+        "data": "periodic",
+        "alg": "t-dqn",
+        "on_policy": bool(on_policy),
+        "battery_env_mode": env_mode,
+    }
 
     # # setup local logging
-    # log_path = "logs"
-    # exp_name = "periodic_qlearn"
-    # save_path = create_exp_folder(log_path, exp_name, id)
+    log_path = "logs"
+    exp_name = "periodic_qlearn"
+    save_path = create_exp_folder(log_path, exp_name, id)
 
     # for logging each step of evaluation
     fname_eval = os.path.join(save_path, "eval.csv")
@@ -123,12 +123,12 @@ def main(batch_size,
         json.dump(config, fp, ensure_ascii=False, indent=4)
 
     wandb_log = None
-    wandb_log = wandb.init(
-        project="trading-bot",
-        name=save_path.replace("/", "-"),
-        config=config,
-        entity="jucaleb4",
-    )
+    # wandb_log = wandb.init(
+    #     project="trading-bot",
+    #     name=save_path.replace("/", "-"),
+    #     config=config,
+    #     entity="jucaleb4",
+    # )
 
     total_steps = 0
     print(f">>> on_policy={on_policy}")

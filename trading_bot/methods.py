@@ -55,8 +55,6 @@ def run_model(agent, iter, train_model:bool=False, on_policy: bool=False, callba
         # transform_reward = (reward+225)/300
         done = term or trunc
 
-        print(action, reward)
-
         total_reward += reward
         num_steps += 1
 

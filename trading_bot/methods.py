@@ -25,7 +25,7 @@ def run_model(agent, iter, train_model:bool=False, on_policy: bool=False, callba
     total_reward = 0
     num_steps = 0
 
-    data_length = 128 # TODO: Magic num
+    data_length = 1024 # TODO: Magic num
     env = agent.env
     batch_size = agent.batch_size
 
@@ -35,8 +35,11 @@ def run_model(agent, iter, train_model:bool=False, on_policy: bool=False, callba
     state, _ = env.reset()
     # TODO: Make this better:- normalize
     transform_state = np.copy(state)
-    transform_state[0] = transform_state[0]/400
-    transform_state[1:11] = (transform_state[1:11]+225)/950
+    # transform_state[0] = transform_state[0]/400
+    # transform_state[1:11] = (transform_state[1:11]+225)/950
+    # transform_state = np.zeros(len(state)-1)
+    # for i in range(0, len(state)-2):
+    #     transform_state[i] = state[i+1] - state[i+2]
 
     for _ in range(data_length):
         # select an action
@@ -44,23 +47,29 @@ def run_model(agent, iter, train_model:bool=False, on_policy: bool=False, callba
 
         next_state, reward, term, trunc, _ = env.step(action)
         transform_next_state = np.copy(next_state)
-        transform_next_state[0] = transform_next_state[0]/400
-        transform_next_state[1:11] = (transform_next_state[1:11]+225)/950
-        transform_reward = (reward+225)/300
+        # transform_next_state[0] = transform_next_state[0]/400
+        # transform_next_state[1:11] = (transform_next_state[1:11]+225)/950
+        # transform_next_state = np.zeros(len(state)-3, dtype=float)
+        # for i in range(0, len(state)-3):
+        #     transform_next_state[i] = next_state[i+1] - next_state[i+2]
+        # transform_reward = (reward+225)/300
         done = term or trunc
+
+        print(action, reward)
 
         total_reward += reward
         num_steps += 1
 
         if callback is not None:
-            callback.log((iter, num_steps, state[0], state[1], action, total_reward))
+            callback.log((iter, num_steps, next_state[0], next_state[1], action, total_reward))
 
         if train_model:
-            agent.remember(transform_state, action, transform_reward, transform_next_state, done)
+            agent.remember(transform_state, action, reward, transform_next_state, done)
+            # agent.remember(transform_state, action, lransform_reward, transform_next_state, done)
 
             # TODO: More principled way to do this?
-            # if len(agent.memory) % batch_size == 0 and len(agent.memory) > batch_size:
-            if len(agent.memory) > batch_size:
+            # if len(agent.memory) % 4 == 0 and len(agent.memory) > batch_size:
+            if len(agent.memory) > batch_size and len(agent.memory) % batch_size == 0:
                 logging.debug(f"Train iter {num_steps}")
                 loss = agent.train_experience_replay(batch_size)
                 avg_loss.append(loss)
@@ -73,4 +82,5 @@ def run_model(agent, iter, train_model:bool=False, on_policy: bool=False, callba
     if callback is not None:
         callback.save_and_clear_cache()
 
+    print(f">>> total_reward={total_reward}")
     return total_reward, num_steps

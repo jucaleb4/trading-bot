@@ -85,6 +85,7 @@ def main(batch_size,
     elif env_mode == BatteryMode.DELAY.value:
         mode_str = "delay"
 
+    # env = gym.make("gym_examples/BatteryEnv-v0", nhistory=nhistory, data="periodic", mode=mode_str)
     env = gym.make("gym_examples/BatteryEnv-v0", nhistory=nhistory, data="periodic", mode=mode_str)
 
     agent = Agent(env, batch_size=batch_size, strategy=strategy, 
@@ -130,6 +131,7 @@ def main(batch_size,
     )
 
     total_steps = 0
+    print(f">>> on_policy={on_policy}")
     
     try:
         stime = time.time()
